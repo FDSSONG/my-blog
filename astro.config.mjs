@@ -27,7 +27,7 @@ import { pluginCustomCopyButton } from "./src/plugins/expressive-code/custom-cop
 export default defineConfig({
   // GitHub Pages 部署配置
   site: 'https:www.fdssong.js.cn', 
-  base: '/my-blog', 
+  base: '/', 
 
   // Fuwari 模板原有配置
   trailingSlash: "always",
