@@ -238,7 +238,7 @@ RocketMQ使用的是发布/订阅模型。
 
 ---
 
-### [6.消息的消费模式了解吗？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#_6-消息的消费模式了解吗)
+### 6.消息的消费模式了解吗？
 
 消息消费模式有两种：**Clustering**（集群消费）和**Broadcasting**（广播消费）。
 
@@ -248,7 +248,17 @@ RocketMQ使用的是发布/订阅模型。
 
 而广播消费消息会发给消费者组中的每一个消费者进行消费。
 
-### [7.RoctetMQ 基本架构了解吗？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#_7-roctetmq-基本架构了解吗)
+---
+
+集群消费：每条消息仅被组内的一个消费者消费。（默认消费模式）例子：电商订单服务实例组成消费组，一条订单消息会被其中一个订单服务实例消费。
+
+广播消费：消息会被组内的所有消费者消费。例子：分布式系统的配置中心，当配置更新时，“配置更新消息”以广播形式发送，所有的订阅实例都会收到消息并刷新本地配置。
+
+---
+
+
+
+### 7.RoctetMQ 基本架构了解吗？
 
 先看图，RocketMQ 的基本架构：
 
@@ -256,7 +266,15 @@ RocketMQ使用的是发布/订阅模型。
 
 RocketMQ 一共有四个部分组成：NameServer，Broker，Producer 生产者，Consumer 消费者，它们对应了：发现、发、存、收，为了保证高可用，一般每一部分都是集群部署的。
 
-### [8.那能介绍一下这四部分吗？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#_8-那能介绍一下这四部分吗)
+---
+
+Name Server集群：充当路由中心和注册中心，是整个架构的“神经中枢“。存储Broker的元数据（Broker地址、Topic和Queue的映射关系）。提供服务发现能力（能够找到对应的Name Server）。
+
+Broker：消息的存储中心，负责接收、存储、转发消息。采用主从架构。
+
+---
+
+### 8.那能介绍一下这四部分吗？
 
 类比一下我们生活的邮政系统——
 
@@ -264,7 +282,7 @@ RocketMQ 一共有四个部分组成：NameServer，Broker，Producer 生产者�
 
 ![RocketMQ类比邮政体系](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-00175355-5532-4ee6-a48c-e3e3a9b87d64.jpg)RocketMQ类比邮政体系
 
-##### [NameServer](https://javabetter.cn/sidebar/sanfene/rocketmq.html#nameserver)
+##### NameServer
 
 NameServer 是一个无状态的服务器，角色类似于 Kafka 使用的 Zookeeper，但比 Zookeeper 更轻量。
 
@@ -278,17 +296,26 @@ NameServer 是一个无状态的服务器，角色类似于 Kafka 使用的 Zook
 - 1、和 Broker 结点保持长连接。
 - 2、维护 Topic 的路由信息。
 
-##### [Broker](https://javabetter.cn/sidebar/sanfene/rocketmq.html#broker)
+##### Broker
 
 消息存储和中转角色，负责存储和转发消息。
 
 - Broker 内部维护着一个个 Consumer Queue，用来存储消息的索引，真正存储消息的地方是 CommitLog（日志文件）。
 
-![RocketMQ存储-图片来源官网](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-789379a9-4a0c-4992-9de1-e49283d089a4.jpg)RocketMQ存储-图片来源官网
+![RocketMQ存储-图片来源官网](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-789379a9-4a0c-4992-9de1-e49283d089a4.jpg)RocketMQ存储
 
 - 单个 Broker 与所有的 Nameserver 保持着长连接和心跳，并会定时将 Topic 信息同步到 NameServer，和 NameServer 的通信底层是通过 Netty 实现的。
 
-##### [Producer](https://javabetter.cn/sidebar/sanfene/rocketmq.html#producer)
+---
+
+commitLog 负责实际的数据存储，ConsumerQueue是CommitLog的逻辑索引。每个ConsumerQueue对应一个MessageQueue。
+
+1. **Producer 发消息**：Producer 将消息发送到指定的 `Topic` 和 `Message Queue`，Broker 收到消息后，**先写入 `CommitLog`**（生成唯一的 `commitLogOffset`），再将该消息的**索引信息（`commitLogOffset`、`msgSize` 等）写入对应的 `ConsumerQueue`**。
+2. **Consumer 消费消息**：Consumer 从 `ConsumerQueue` 中读取 “消息索引”，再根据 `commitLogOffset` 到 `CommitLog` 中**定位并读取完整消息**，实现消费。
+
+---
+
+##### Producer
 
 消息生产者，业务端负责发送消息，由用户自行实现和分布式部署。
 
@@ -298,7 +325,7 @@ NameServer 是一个无状态的服务器，角色类似于 Kafka 使用的 Zook
 - **异步发送**：异步发送指发送方发出数据后，不等接收方发回响应，接着发送下个数据包，一般用于可能链路耗时较长而对响应时间敏感的业务场景，例如用户视频上传后通知启动转码服务。
 - **单向发送**：单向发送是指只负责发送消息而不等待服务器回应且没有回调函数触发，适用于某些耗时非常短但对可靠性要求并不高的场景，例如日志收集。
 
-##### [Consumer](https://javabetter.cn/sidebar/sanfene/rocketmq.html#consumer)
+##### Consumer
 
 消息消费者，负责消费消息，一般是后台系统负责异步消费。
 
@@ -306,15 +333,20 @@ NameServer 是一个无状态的服务器，角色类似于 Kafka 使用的 Zook
 - **Pull**：拉取型消费者（Pull Consumer）主动从消息服务器拉取信息，只要批量拉取到消息，用户应用就会启动消费过程，所以 Pull 称为主动消费型。
 - **Push**：推送型消费者（Push Consumer）封装了消息的拉取、消费进度和其他的内部维护工作，将消息到达时执行的回调接口留给用户应用程序来实现。所以 Push 称为被动消费类型，但其实从实现上看还是从消息服务器中拉取消息，不同于 Pull 的是 Push 首先要注册消费监听器，当监听器处触发后才开始消费消息。
 
-GitHub 上标星 10000+ 的开源知识库《[二哥的 Java 进阶之路](https://github.com/itwanger/toBeBetterJavaer)》第一版 PDF 终于来了！包括 Java 基础语法、数组&字符串、OOP、集合框架、Java IO、异常处理、Java 新特性、网络编程、NIO、并发编程、JVM 等等，共计 32 万余字，500+张手绘图，可以说是通俗易懂、风趣幽默……详情戳：[太赞了，GitHub 上标星 10000+ 的 Java 教程](https://javabetter.cn/overview/)
+---
 
-微信搜 **沉默王二** 或扫描下方二维码关注二哥的原创公众号沉默王二，回复 **222** 即可免费领取。
+Pull：消费者主动拉取，消费节奏由用户自主控制。但需要用户自己处理”消息堆积、拉取频率“等问题。
 
-![img](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/gongzhonghao.png)
+Push：底层还是从Broker拉取消息。对用户更加友好，但消费节奏由Broker和监听器触发逻辑共同决定。
 
-## [进阶](https://javabetter.cn/sidebar/sanfene/rocketmq.html#进阶)
+---
 
-### [9.如何保证消息的可用性/可靠性/不丢失呢？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#_9-如何保证消息的可用性-可靠性-不丢失呢)
+## 进阶
+
+1. **Producer 发消息**：Producer 将消息发送到指定的 `Topic` 和 `Message Queue`，Broker 收到消息后，**先写入 `CommitLog`**（生成唯一的 `commitLogOffset`），再将该消息的**索引信息（`commitLogOffset`、`msgSize` 等）写入对应的 `ConsumerQueue`**。
+2. **Consumer 消费消息**：Consumer 从 `ConsumerQueue` 中读取 “消息索引”，再根据 `commitLogOffset` 到 `CommitLog` 中**定位并读取完整消息**，实现消费。
+
+### 9.如何保证消息的可用性/可靠性/不丢失呢？
 
 消息可能在哪些阶段丢失呢？可能会在这三个阶段发生丢失：生产阶段、存储阶段、消费阶段。
 
@@ -322,7 +354,7 @@ GitHub 上标星 10000+ 的开源知识库《[二哥的 Java 进阶之路](https
 
 ![消息传递三阶段](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-692a920d-621f-4b36-87f8-edb53e7f5cd9.jpg)消息传递三阶段
 
-##### [生产](https://javabetter.cn/sidebar/sanfene/rocketmq.html#生产)
+##### 生产
 
 在生产阶段，主要**通过请求确认机制，来保证消息的可靠传递**。
 
@@ -330,7 +362,17 @@ GitHub 上标星 10000+ 的开源知识库《[二哥的 Java 进阶之路](https
 - 2、异步发送的时候，应该在回调方法里检查，如果发送失败或者异常，都应该进行重试。
 - 3、如果发生超时的情况，也可以通过查询日志的 API，来检查是否在 Broker 存储成功。
 
-##### [存储](https://javabetter.cn/sidebar/sanfene/rocketmq.html#存储)
+---
+
+同步发送：发送消息后，等待Broker同步回应。（强一致性，金融交易场景）。
+
+异步发送：发送消息后，不阻塞等待响应，而是调用“回调函数”来接收Broker的结果通知。（高吞吐量，日志采集场景）。
+
+发送过程中出现超时，通过查询日志的API，检查消息是否存储在Broker中。（兜底方案）。
+
+---
+
+##### 存储
 
 存储阶段，可以通过**配置可靠性优先的 Broker 参数来避免因为宕机丢消息**，简单说就是可靠性优先的场景都应该使用同步。
 
@@ -341,19 +383,38 @@ GitHub 上标星 10000+ 的开源知识库《[二哥的 Java 进阶之路](https
 
 - 3、Broker 通过主从模式来保证高可用，Broker 支持 Master 和 Slave 同步复制、Master 和 Slave 异步复制模式，生产者的消息都是发送给 Master，但是消费既可以从 Master 消费，也可以从 Slave 消费。同步复制模式可以保证即使 Master 宕机，消息肯定在 Slave 中有备份，保证了消息不会丢失。
 
-##### [消费](https://javabetter.cn/sidebar/sanfene/rocketmq.html#消费)
+---
+
+消息持久化：通过CommitLog日志恢复
+
+Broker的刷盘机制：同步刷盘（等待写入磁盘再确认）和异步刷盘（写到内存中先确认，再写进磁盘中）。
+
+主从机制：消息发送给Master，但消息可以从Master或者Slave消费。Master和Slave之间同步复制消息，即使Master宕机，Slave中也有数据。
+
+---
+
+##### 消费
 
 从 Consumer 角度分析，如何保证消息被成功消费？
 
 - Consumer 保证消息成功消费的关键在于确认的时机，不要在收到消息后就立即发送消费确认，而是应该在执行完所有消费业务逻辑之后，再发送消费确认。因为消息队列维护了消费的位置，逻辑执行失败了，没有确认，再去队列拉取消息，就还是之前的一条。
 
-### [10.如何处理消息重复的问题呢？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#_10-如何处理消息重复的问题呢)
+### 10.如何处理消息重复的问题呢？
 
 RocketMQ 可以保证消息一定投递，且不丢失，但无法保证消息不重复消费。
 
 因此，需要在业务端做好消息的幂等性处理，或者做消息去重。
 
-![三分恶面渣逆袭：幂等和去重](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-05c0538b-abfa-4bb0-973f-6b92555a6e5b.jpg)三分恶面渣逆袭：幂等和去重
+---
+
+RocketMQ 能保证消息 “一定投递且不丢失”，但**无法保证 “不重复消费”**。例如：
+
+- 网络重试：Producer 发送消息后未收到 ACK，重试发送导致 Broker 收到多条重复消息；(生产者重复生产消息)
+- 消费重试：Consumer 消费消息后未及时提交 Offset，RocketMQ 会触发重试，导致消息被重复拉取。（消费者未及时提交，RocketMQ重试，导致消息被拉取）。
+
+---
+
+![三分恶面渣逆袭：幂等和去重](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-05c0538b-abfa-4bb0-973f-6b92555a6e5b.jpg)
 
 幂等性是指一个操作可以执行多次而不会产生副作用，即无论执行多少次，结果都是相同的。可以在业务逻辑中加入检查逻辑，确保同一消息多次消费不会产生副作用。
 
@@ -364,8 +425,6 @@ RocketMQ 可以保证消息一定投递，且不丢失，但无法保证消息�
 消息去重，是指在消费者消费消息之前，先检查一下是否已经消费过这条消息，如果消费过了，就不再消费。
 
 业务端可以通过一个专门的表来记录已经消费过的消息 ID，每次消费消息之前，先查询一下这个表，如果已经存在，就不再消费。
-
-
 
 ```
 public void processMessage(String messageId, String message) {
@@ -384,13 +443,13 @@ private void markMessageAsProcessed(String messageId) {
 }
 ```
 
-#### [如何保证消息的幂等性？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#如何保证消息的幂等性)
 
-![勇哥：消费幂等](https://cdn.tobebetterjavaer.com/stutymore/rocketmq-20240726172003.png)勇哥：消费幂等
+
+#### 如何保证消息的幂等性？
+
+![勇哥：消费幂等](https://cdn.tobebetterjavaer.com/stutymore/rocketmq-20240726172003.png)
 
 首先，消息必须携带业务唯一标识，可以通过雪花算法生成全局唯一 ID。
-
-
 
 ```
 Message msg = new Message(TOPIC /* Topic */,
@@ -400,6 +459,12 @@ Message msg = new Message(TOPIC /* Topic */,
 message.setKey("ORDERID_100"); // 订单编号
 SendResult sendResult = producer.send(message);
 ```
+
+---
+
+消息唯一标识：雪花算法生成全局唯一算法。
+
+---
 
 其次，在消费者接收到消息后，判断 Redis 中是否存在该业务主键的标志位，若存在标志位，则认为消费成功，否则执行业务逻辑，执行完成后，在缓存中添加标志位。
 
@@ -425,6 +490,11 @@ public ConsumeConcurrentlyStatus consumeMessage(List<MessageExt> msgs, ConsumeCo
         return ConsumeConcurrentlyStatus.RECONSUME_LATER;
     }
 }
+
+
+
+
+
 ```
 
 然后，利用数据库的唯一索引来防止业务的重复插入。
@@ -466,9 +536,16 @@ public void updateRecordWithPessimisticLock(int id) {
     jdbcTemplate.queryForObject("SELECT * FROM records WHERE id = ? FOR UPDATE", id);
     jdbcTemplate.update("UPDATE records SET value = ? WHERE id = ?", "newValue", id);
 }
+
+
+
+
+两者不是替代关系，而是 **“多层防护”** 的关系：
+先用 “消息去重” 过滤掉明显的重复消息（减少业务执行次数）；
+再用 “数据库幂等设计” 作为兜底，即使消息去重失效（如 Redis 故障），也能通过数据库层的约束保证业务操作不重复生效。
 ```
 
-#### [雪花算法了解吗？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#雪花算法了解吗)
+#### 雪花算法了解吗？
 
 雪花算法是由 Twitter 开发的一种分布式唯一 ID 生成算法。
 
@@ -489,34 +566,54 @@ public void updateRecordWithPessimisticLock(int id) {
 long id = IdUtil.getSnowflakeNextId();
 ```
 
-> 1. [Java 面试指南（付费）](https://javabetter.cn/zhishixingqiu/mianshi.html)收录的京东同学 4 云实习面试原题：如何处理消息重复消费的问题？如何保证幂等性？雪花算法了解吗？
+> 1. [Java 面试指南（付费）](https://javabetter.cn/zhishixingqiu/mianshi.html)收录的京东同学 4 云实习面试原题网络：如何处理消息重复消费的问题？如何保证幂等性？雪花算法了解吗？
 
-### [11.怎么处理消息积压？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#_11-怎么处理消息积压)
+### 11.怎么处理消息积压？
 
 发生了消息积压，这时候就得想办法赶紧把积压的消息消费完，就得考虑提高消费能力，一般有两种办法：
 
 ![消息积压处理](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-5d1ea064-1a37-4746-ad26-a18a1c8c344e.jpg)消息积压处理
 
-- **消费者扩容**：如果当前 Topic 的 Message Queue 的数量大于消费者数量，就可以对消费者进行扩容，增加消费者，来提高消费能力，尽快把积压的消息消费玩。
+- **消费者扩容**：如果当前 Topic 的 Message Queue 的数量大于消费者数量，就可以对消费者进行扩容，增加消费者，来提高消费能力，尽快把积压的消息消费完。
 - **消息迁移 Queue 扩容**：如果当前 Topic 的 Message Queue 的数量小于或者等于消费者数量，这种情况，再扩容消费者就没什么用，就得考虑扩容 Message Queue。可以新建一个临时的 Topic，临时的 Topic 多设置一些 Message Queue，然后先用一些消费者把消费的数据丢到临时的 Topic，因为不用业务处理，只是转发一下消息，还是很快的。接下来用扩容的消费者去消费新的 Topic 里的数据，消费完了之后，恢复原状。
 
-![消息迁移扩容消费](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-69aa8004-45e9-4e41-b628-1d7ed6d94c92.jpg)消息迁移扩容消费
+![消息迁移扩容消费](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-69aa8004-45e9-4e41-b628-1d7ed6d94c92.jpg)
 
-### [12.顺序消息如何实现？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#_12-顺序消息如何实现)
+---
+
+主要实现方法：
+
+1. 当消息队列数量大于消费者数量时，对消费者进行扩容，提高消费能力。
+2. 当消息队列数量小于等于消费者数量时，得扩容Message Queue。新建一个临时Topic，该Topic中多设置一些Message Queue，然后让消费者把一些消息丢到临时Topic中，让扩容的消费者去消费新的Topic中的数据。
+
+---
+
+### 12.顺序消息如何实现？
 
 RocketMQ 提供了两种级别的顺序消息：全局顺序和局部顺序。
 
-![三分恶面渣逆袭：顺序消息](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-e3de6bb5-b5db-47af-8ae3-73aedd269f32.jpg)三分恶面渣逆袭：顺序消息
+![三分恶面渣逆袭：顺序消息](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-e3de6bb5-b5db-47af-8ae3-73aedd269f32.jpg)
 
 全局顺序是指整个 Topic 的所有消息都严格按照发送顺序消费，这种方式性能比较低，实际项目中用得不多。
 
-![三分恶面渣逆袭：全局顺序消息](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-8e98ac61-ad47-4ed4-aac6-223201f9aae2.jpg)三分恶面渣逆袭：全局顺序消息
+![三分恶面渣逆袭：全局顺序消息](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-8e98ac61-ad47-4ed4-aac6-223201f9aae2.jpg)
 
 局部顺序是指特定分区内的消息保证顺序，这是我们常用的方式。
 
-![三分恶面渣逆袭：部分顺序消息](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-14ab3700-8538-473e-bb66-8acfdd6a77a2.jpg)三分恶面渣逆袭：部分顺序消息
+![三分恶面渣逆袭：部分顺序消息](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-14ab3700-8538-473e-bb66-8acfdd6a77a2.jpg)
 
 要保证顺序，关键是要把需要保证顺序的消息发送到同一个 MessageQueue 中。
+
+
+
+---
+
+RocketMQ顺序消息实现机制：
+
+1. 全局顺序消息：整个Topic中的消息都严格按照发送顺序消费。实现方法：将Topic中的MessageQueue数量设置为1。只有一个队列和一个消费者能够处理消息，虽然能保证按顺序消费，但无法并行，性能低。
+2. 局部顺序消息：特定业务分组内的消息保证顺序。将同一业务标识的消息发送到同一个Message Queue中，同一业务标识的消息能保证顺序。实现方法：当消费者消费该队列时，会对该队列进行加锁。其他消费者无法同时消费。
+
+---
 
 
 
@@ -540,11 +637,9 @@ producer.send(message, new MessageQueueSelector() {
 > 2. [Java 面试指南（付费）](https://javabetter.cn/zhishixingqiu/mianshi.html)收录的收钱吧面经同学 1 Java 后端一面面试原题：RocketMQ的顺序消息？
 > 3. [Java 面试指南（付费）](https://javabetter.cn/zhishixingqiu/mianshi.html)收录的中小厂面经同学6 广州中厂面试原题：RocketMQ怎么保证消息顺序？
 
-memo：2025 年 8 月 15 日修改至此，今天在[帮球友修改简历时](https://javabetter.cn/zhishixingqiu/jianli.html)，收到这样一个反馈：目前正在高德暑期实习，3 月底找二哥修改过简历，觉得改的非常好。
 
-![高德实习的球友](https://cdn.tobebetterjavaer.com/stutymore/rocketmq-20250924165532.png)高德实习的球友
 
-### [13.如何实现消息过滤？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#_13-如何实现消息过滤)
+### 13.如何实现消息过滤？
 
 有两种方案：
 
@@ -555,7 +650,7 @@ memo：2025 年 8 月 15 日修改至此，今天在[帮球友修改简历时](h
 
 对消息的过滤有三种方式：
 
-![消息过滤](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-f2c8bf50-dc51-44c8-9d71-b8a22af199c4.jpg)消息过滤
+![消息过滤](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-f2c8bf50-dc51-44c8-9d71-b8a22af199c4.jpg)
 
 - 根据 Tag 过滤：这是最常见的一种，用起来高效简单
 
@@ -585,7 +680,30 @@ consumer.start();
 
 - Filter Server 方式：最灵活，也是最复杂的一种方式，允许用户自定义函数进行过滤
 
-### [14.延时消息了解吗？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#_14-延时消息了解吗)
+---
+
+消息过滤应用的场景：
+
+1. 实际业务中，一个Topic可能有多种类型消息。如果没有过滤消息，Consumer会收到所有消息，造成资源浪费。
+2. 简化业务逻辑，降低开发维护成本：没有过滤功能，Consumer需要在业务代码中加入逻辑。一是代码冗余，每个逻辑都要写。二是过滤逻辑修改，所有Consumer都需要修改。将筛选逻辑和业务逻辑解耦。Consumer只需关注业务逻辑。
+3. 支持多业务并行消费。
+
+主要方案：
+
+1. Broker过滤：在broker根据Consumer过滤逻辑进行过滤。优点：减少了网络和Consumer资源消耗，但增加了Broker的负担，实现逻辑较为复杂。
+2. Consumer过滤：在Consumer根据逻辑过滤。好处：实现简单。坏处：增加了网络额和Consumer的资源消耗。
+
+过滤的几种方式：
+
+1. 根据Tag过滤。最常见简单高效。
+2. 根据SQL表达式过滤。优点：支持复杂事件过滤，灵活性高，但需在Broker开启SQL过滤功能。
+3. Filter Server过滤。允许Java自定义逻辑过滤，Broker会加载并执行这些函数来过滤。优点：完全自定义逻辑，灵活性极高，需对broker进行定制开发。缺点：实现和维护成本高。
+
+---
+
+
+
+### 14.延时消息了解吗？
 
 电商的订单超时自动取消，就是一个典型的利用延时消息的例子，用户提交了一个订单，就可以发送一个延时消息，1h 后去检查这个订单的状态，如果还是未付款就取消订单释放库存。
 
@@ -614,23 +732,32 @@ for (int i = 0; i < totalMessagesToSend; i++) {
 
 ```
 private String messageDelayLevel = "1s 5s 10s 30s 1m 2m 3m 4m 5m 6m 7m 8m 9m 10m 20m 30m 1h 2h";
+
+
+
 ```
 
-#### [RocketMQ 怎么实现延时消息的？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#rocketmq-怎么实现延时消息的)
+---
+
+RocketMQ会将延时消息放进特殊的延迟队列，根据延迟级别计算触发时间。到达触发时间后，会将消息从延迟队列转移到目标Topic的普通队列，被消费者消费。
+
+---
+
+#### RocketMQ 怎么实现延时消息的？
 
 简单，八个字：`临时存储`+`定时任务`。
 
 Broker 收到延时消息了，会先发送到主题（SCHEDULE_TOPIC_XXXX）的相应时间段的 Message Queue 中，然后通过一个定时任务轮询这些队列，到期后，把消息投递到目标 Topic 的队列中，然后消费者就可以正常消费这些消息。
 
-![延迟消息处理流程-图片来源见水印](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-e3b68480-8006-4cd6-892a-1c72f8b0fbcb.jpg)延迟消息处理流程-图片来源见水印
+![延迟消息处理流程-图片来源见水印](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-e3b68480-8006-4cd6-892a-1c72f8b0fbcb.jpg)
 
-### [15.怎么实现分布式消息事务的？半消息？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#_15-怎么实现分布式消息事务的-半消息)
+### 15.怎么实现分布式消息事务的？半消息？
 
 半消息：是指暂时还不能被 Consumer 消费的消息，Producer 成功发送到 Broker 端的消息，但是此消息被标记为 “暂不可投递” 状态，只有等 Producer 端执行完本地事务后经过二次确认了之后，Consumer 才能消费此条消息。
 
 依赖半消息，可以实现分布式消息事务，其中的关键在于二次确认以及消息回查：
 
-![RocketMQ实现消息事务](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-76df2fb9-0f3f-496d-88a8-aac79ad1102c.jpg)RocketMQ实现消息事务
+![RocketMQ实现消息事务](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-76df2fb9-0f3f-496d-88a8-aac79ad1102c.jpg)
 
 - 1、Producer 向 broker 发送半消息
 - 2、Producer 端收到响应，消息发送成功，此时消息是半消息，标记为 “不可投递” 状态，Consumer 消费不了。
@@ -641,25 +768,43 @@ Broker 收到延时消息了，会先发送到主题（SCHEDULE_TOPIC_XXXX）的
 - 7、根据事务的状态提交 commit/rollback 到 broker 端。（5，6，7 是消息回查）
 - 8、消费者段消费到消息之后，执行本地事务。
 
-### [16.死信队列知道吗？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#_16-死信队列知道吗)
+
+
+---
+
+分布式事务：业务操作涉及多个独立服务，需要有一种机制保证多个分布式操作的原子性。
+
+分布式消息事务：通过消息中间件来协调分布式系统多个服务的事务，保证”消息的发送“和”本地业务操作“的原子性。
+
+---
+
+### 16.死信队列知道吗？
 
 死信队列用于存储那些无法被正常处理的消息，这些消息被称为死信（Dead Letter）。
 
-![阿里云官方文档：死信队列](https://cdn.tobebetterjavaer.com/stutymore/rocketmq-20240726163831.png)阿里云官方文档：死信队列
+![阿里云官方文档：死信队列](https://cdn.tobebetterjavaer.com/stutymore/rocketmq-20240726163831.png)
 
 产生死信的原因是，消费者在处理消息时发生异常，且达到了最大重试次数。当消费失败的原因排查并解决后，可以重发这些死信消息，让消费者重新消费；如果暂时无法处理，为避免到期后死信消息被删除，可以先将死信消息导出并进行保存。
 
 > 1. [Java 面试指南（付费）](https://javabetter.cn/zhishixingqiu/mianshi.html)收录的京东同学 4 云实习面试原题：说说 RocketMQ 的死信队列
 
-### [17.如何保证 RocketMQ 的高可用？](https://javabetter.cn/sidebar/sanfene/rocketmq.html#_17-如何保证-rocketmq-的高可用)
+---
+
+死信队列：用于存储那些无法被正常处理的消息。这些消息通常是消费者重试失败，且达到了最大重试次数，无法通过最大重试次数解决。
+
+---
+
+
+
+### 17.如何保证 RocketMQ 的高可用？
 
 NameServer 因为是无状态，且不相互通信的，所以只要集群部署就可以保证高可用。
 
-![NameServer集群](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-0ce789f4-7a47-4c24-ac08-76f0490298f7.jpg)NameServer集群
+![NameServer集群](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-0ce789f4-7a47-4c24-ac08-76f0490298f7.jpg)
 
 RocketMQ 的高可用主要是在体现在 Broker 的读和写的高可用，Broker 的高可用是通过`集群`和`主从`实现的。
 
-![Broker集群、主从示意图](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-76c5eb61-9605-4620-84fb-dc960f01de85.jpg)Broker集群、主从示意图
+![Broker集群、主从示意图](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/nice-article/weixin-mianznxrocketmqessw-76c5eb61-9605-4620-84fb-dc960f01de85.jpg)
 
 Broker 可以配置两种角色：Master 和 Slave，Master 角色的 Broker 支持读和写，Slave 角色的 Broker 只支持读，Master 会向 Slave 同步消息。
 
@@ -669,11 +814,27 @@ Consumer 的配置文件中，并不需要设置是从 Master 读还是从 Slave
 
 如何达到发送端写的高可用性呢？在创建 Topic 的时候，把 Topic 的多个 Message Queue 创建在多个 Broker 组上（相同 Broker 名称，不同 brokerId 机器组成 Broker 组），这样当 Broker 组的 Master 不可用后，其他组 Master 仍然可用， Producer 仍然可以发送消息 RocketMQ 目前还不支持把 Slave 自动转成 Master ，如果机器资源不足，需要把 Slave 转成 Master ，则要手动停止 Slave 色的 Broker ，更改配置文件，用新的配置文件启动 Broker。
 
-GitHub 上标星 10000+ 的开源知识库《[二哥的 Java 进阶之路](https://github.com/itwanger/toBeBetterJavaer)》第一版 PDF 终于来了！包括 Java 基础语法、数组&字符串、OOP、集合框架、Java IO、异常处理、Java 新特性、网络编程、NIO、并发编程、JVM 等等，共计 32 万余字，500+张手绘图，可以说是通俗易懂、风趣幽默……详情戳：[太赞了，GitHub 上标星 10000+ 的 Java 教程](https://javabetter.cn/overview/)
 
-微信搜 **沉默王二** 或扫描下方二维码关注二哥的原创公众号沉默王二，回复 **222** 即可免费领取。
 
-![img](https://cdn.tobebetterjavaer.com/tobebetterjavaer/images/gongzhonghao.png)
+---
+
+RocketMQ高可用主要是NameServer高可用和Broker高可用。
+
+NameServer高可用：无状态集群部署。无状态指仅维护Broker和Topic的临时路由信息，且节点间不相互通信。通过多节点集群部署，生产者和消费者也可以切换到其他NameServer节点获取路由信息，确保服务不中断。
+
+Broker高可用：主从集群+读写分离。
+
+Broker主节点：支持读写操作，负责接收Producer发送的消息，并将消息同步到Slave节点。
+
+Slave节点：仅支持读操作，同步Master的消息。
+
+---
+
+
+
+
+
+
 
 ## [原理](https://javabetter.cn/sidebar/sanfene/rocketmq.html#原理)
 
