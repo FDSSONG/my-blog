@@ -143,6 +143,13 @@ ON employees.department_id = departments.id;
 ```
 这个查询返回所有员工和所有部门，包括没有匹配行的记录。
 
+
+```SQL
+# UNION的效果是合并多个SELECT语句的结果集，最终返回一个去重后的结果集
+# UNION ALL的效果是不去重的
+
+```
+
 ## MySQL如何避免重复插入数据？
 方式一：使用UNIQUE约束
 
@@ -191,7 +198,7 @@ VALUES ('example@example.com', 'John Doe');
 - 如果字符集是 UTF - 8 字符集，它的每个字符可能占用 1 到 4 个字节，对于 VARCHAR(10) 的字段，它最多可以存储 10 个字符，但占用的字节数会根据字符的不同而变化。
 
 ## int(1) int(10) 在mysql有什么不同？
-INT(1) 和 INT(10) 的区别主要在于 显示宽度，而不是存储范围或数据类型本身的大小。以下是核心区别的总结：
+INT(1) 和 INT(10) 的区别主要在于 **显示宽度**，而不是存储范围或数据类型本身的大小。以下是核心区别的总结：
 
 - 本质是显示宽度，不改变存储方式：INT 的存储固定为 4 字节，所有 INT（无论写成 INT(1) 还是 INT(10)）占用的存储空间 均为 4 字节。括号内的数值（如 1 或 10）是显示宽度，用于在 特定场景下 控制数值的展示格式。
 - 唯一作用场景：ZEROFILL 补零显示，当字段设置 ZEROFILL 时：数字显示时会用前导零填充至指定宽度。比如，字段类型为 INT(4) ZEROFILL，实际存入 5 → 显示为 0005，实际存入 12345 → 显示仍为 12345（宽度超限时不截断）。
@@ -320,6 +327,16 @@ WHERE EXISTS (SELECT 1 FROM Orders WHERE Orders.CustomerID = Customers.CustomerI
 - 使用场景：如果子查询结果集较小且不频繁变动，IN 可能更直观易懂。而当子查询涉及外部查询的每一行判断，并且子查询的效率较高时，EXISTS 更为合适。
 - NULL值处理：IN 能够正确处理子查询中包含NULL值的情况，而EXISTS 不受子查询结果中NULL值的影响，因为它关注的是行的存在性，而不是具体值。
 
+
+```
+功能逻辑：
+IN：判断字段值是否在结果集内。重点是字段值的匹配性。
+EXISTS：判断子查询是否有返回行。重点是行的存在性。
+性能差异根源：
+IN：会把子查询结果加载到内存，再逐步与外部查询字段匹配。若子查询结果集很大，会出现“全量加载+扫描”导致性能瓶颈。
+EXISTS：驱动式查询——外部查询每遍历一行，就执行一次子查询，找到匹配行后立即停止。在子查询比较大时，能避免全表扫描。
+```
+
 ## mysql中的一些基本函数，你知道哪些？
 `一、字符串函数`
 
@@ -401,6 +418,30 @@ MIN(column)：返回指定列的最小值。
 (12) LIMIT <limit_number>;
 ``` 
 
+```sql
+
+每个步骤执行后都会生成一个临时虚拟表，作为下一个步骤的输入。例如：
+FROM + ON + OUTER JOIN 生成 “连接后的虚拟表 A”；
+WHERE 筛选 A 生成 “筛选后的虚拟表 B”；
+GROUP BY + AGG FUNC 对 B 分组聚合，生成 “分组后的虚拟表 C”；
+以此类推，最终步骤生成的虚拟表就是查询的输出结果。
+
+
+举例子：
+SELECT department, COUNT(emp_id) AS emp_count
+FROM employees
+JOIN departments ON employees.dept_id = departments.dept_id
+WHERE employees.salary > 5000
+GROUP BY department
+HAVING emp_count > 10
+ORDER BY emp_count DESC
+LIMIT 5;
+
+执行顺序：FROM（employees、departments）→ ON（连接条件）→ OUTER JOIN（这里是内连接，无补充行）→ WHERE（筛选薪资 > 5000 的员工）→ GROUP BY（按部门分组）→ AGG FUNC（统计每个部门的员工数）→ HAVING（筛选员工数 > 10 的部门）→ SELECT（选择部门和统计数）→ ORDER BY（按员工数降序）→ LIMIT（取前 5 条）。
+
+HAVING 关键字的作用是对分组后的结果集进行条件筛选，它与 WHERE 的核心区别在于：WHERE 筛选的是分组前的行，而 HAVING 筛选的是分组后的组，且 HAVING 可以使用聚合函数
+```
+
 ## sql题：给学生表、课程成绩表，求不存在01课程但存在02课程的学生的成绩
 
 可以使用SQL的子查询和`LEFT JOIN`或者`EXISTS`关键字来实现，这里我将展示两种不同的方法来完成这个查询。
@@ -418,6 +459,9 @@ LEFT JOIN Score AS sc1 ON s.sid = sc1.sid AND sc1.cid = '01'
 LEFT JOIN Score AS sc2 ON s.sid = sc2.sid AND sc2.cid = '02'
 WHERE sc1.cid IS NULL AND sc2.cid IS NOT NULL;
 ```
+连接两个虚拟表，左连后在筛选
+
+
 方法2：使用NOT EXISTS
 ```SQL
 SELECT s.sid, s.sname, sc.cid, sc.score
@@ -427,9 +471,12 @@ WHERE NOT EXISTS (
     SELECT 1 FROM Score sc1 WHERE sc1.sid = s.sid AND sc1.cid = '01'
 );
 ```
+
+
 ## 给定一个学生表 student_score（stu_id，subject_id，score），查询总分排名在5-10名的学生id及对应的总分
 可以使用以下 SQL 查询来检索总分排名在 5 到 10 名的学生 ID 及对应的总分。其中我们先计算每个学生的总分，然后为其分配一个排名，最后检索排名在 5 到 10 之间的记录。
 ```sql
+# 根据每个stu_id得出总分
 # With代表临时结果集
 WITH StudentTotalScores AS (
     SELECT 
@@ -440,6 +487,7 @@ WITH StudentTotalScores AS (
     GROUP BY 
         stu_id
 ),
+# 对StudentTotalScores进行排序
 RankedStudents AS (
     SELECT
         stu_id,
@@ -528,11 +576,11 @@ CREATE TABLE `lock_table` (
 
 1. 开启事务
 
-2. 执行 SQL SELECT holder_thread, reentry_count FROM lock_table WHERE lock_name =? FOR UPDATE，查询是否存在该记录：
+2. 执行 SQL `SELECT holder_thread, reentry_count FROM lock_table WHERE lock_name =? FOR UPDATE`，查询是否存在该记录：
 
-    - 如果记录不存在，则直接加锁，执行 INSERT INTO lock_table (lock_name, holder_thread, reentry_count) VALUES (?,?, 1)
+    - 如果记录不存在，则直接加锁，执行 `INSERT INTO lock_table (lock_name, holder_thread, reentry_count) VALUES (?,?, 1)`
 
-    - 如果记录存在，且持有者是同一个线程，则可冲入，增加重入次数，执行 UPDATE lock_table SET reentry_count = reentry_count + 1 WHERE lock_name =?
+    - 如果记录存在，且持有者是同一个线程，则可重入，增加重入次数，执行 `UPDATE lock_table SET reentry_count = reentry_count + 1 WHERE lock_name =?`
 
 3. 提交事务
 
@@ -540,11 +588,11 @@ CREATE TABLE `lock_table` (
 
 1. 开启事务
 
-2. 执行 SQL SELECT holder_thread, reentry_count FROM lock_table WHERE lock_name =? FOR UPDATE，查询是否存在该记录：
+2. 执行 SQL `SELECT holder_thread, reentry_count FROM lock_table WHERE lock_name =? FOR UPDATE`，查询是否存在该记录：
 
-    - 如果记录存在，且持有者是同一个线程，且可重入数大于 1 ，则减少重入次数 UPDATE lock_table SET reentry_count = reentry_count - 1 WHERE lock_name =?
+    - 如果记录存在，且持有者是同一个线程，且可重入数大于 1 ，则减少重入次数 `UPDATE lock_table SET reentry_count = reentry_count - 1 WHERE lock_name =?`
 
-    - 如果记录存在，且持有者是同一个线程，且可重入数小于等于 0 ，则完全释放锁，DELETE FROM lock_table WHERE lock_name =?
+    - 如果记录存在，且持有者是同一个线程，且可重入数小于等于 0 ，则完全释放锁，`DELETE FROM lock_table WHERE lock_name =?`
 
 3. 提交事务
 
@@ -569,6 +617,13 @@ CREATE TABLE `lock_table` (
     - 优化阶段：基于查询成本的考虑， 选择查询成本最小的执行计划；
 
     - 执行阶段：根据执行计划执行 SQL 查询语句，从存储引擎读取记录，返回给客户端；
+
+```
+    首先是连接器，建立连接，校验用户身份。
+    然后是查询缓存，查询语句如果命中查询缓存则直接返回，否则向下继续执行。MySQL8.0已经删除了该模块。
+    解析SQL：解析器对SQL查询语句进行词法分析、语法分析，然后构建语法树。
+    执行SQL：
+```
 
 
 ## 讲一讲mysql的引擎吧，你有什么了解？
