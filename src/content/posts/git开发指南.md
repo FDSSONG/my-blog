@@ -152,7 +152,7 @@ git branch -m <old> <new>            # 本地重命名
 
 ## 4. 团队协作工作流
 
-### 4.1 标准 PR/MR 流程、
+### 4.1 标准 PR/MR 流程
 ![Gemini_6](./image/Git/Git标准流程.png)
 
 ### 4.2 保持分支最新
