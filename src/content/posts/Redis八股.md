@@ -3,7 +3,7 @@ title: Redis八股
 published: 2025-10-29
 description: ''
 image: ''
-tags: []
+tags: ['面试','Redis']
 category: 'Redis'
 draft: false 
 lang: ''

@@ -3,7 +3,7 @@ title: RocketMq八股
 published: 2025-10-27
 description: ''
 image: ''
-tags: []
+tags: ['面试','消息队列']
 category: '消息队列'
 draft: false 
 lang: ''

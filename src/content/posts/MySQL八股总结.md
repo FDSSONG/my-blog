@@ -3,8 +3,8 @@ title: MySQL八股总结
 published: 2026-01-17
 description: ''
 image: ''
-tags: []
-category: ''
+tags: ['面试','MySQL']
+category: 'MySQL'
 draft: false 
 lang: ''
 ---

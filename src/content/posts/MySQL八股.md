@@ -3,7 +3,7 @@ title: MySQL八股
 published: 2025-10-29
 description: ''
 image: ''
-tags: []
+tags: ['面试','MySQL']
 category: 'MySQL'
 draft: false 
 lang: ''
