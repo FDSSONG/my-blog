@@ -1,5 +1,5 @@
 ---
-title: MySQL八股总结.md
+title: MySQL八股总结
 published: 2026-01-17
 description: ''
 image: ''
