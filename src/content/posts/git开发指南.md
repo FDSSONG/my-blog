@@ -30,7 +30,7 @@ lang: ''
 ## 1.基础概念
 
 ### 1.1 Git 三大区域
-![Gemini_1](./image/Git/Git三大区域.png)
+![Git三大区域](./image/Git/Git三大区域.png)
 
 ### 1.2 核心对象模型
 ![Gemini_2](./image/Git/Git核心对象模型.png)
