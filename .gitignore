@@ -1,2 +1,5 @@
 node_modules/
 .astro/
+
+# ignore this post
+src/content/posts/RAG_Anything.md
