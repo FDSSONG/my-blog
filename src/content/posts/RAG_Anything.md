@@ -1,7 +1,7 @@
 ---
 title: RAG-Anything
 published: 2026-01-21
-description: ''
+description: 'RAG-Anything项目介绍'
 image: ''
 tags: ['学习','大模型应用']
 category: '大模型'
