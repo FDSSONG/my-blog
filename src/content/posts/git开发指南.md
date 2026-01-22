@@ -1,7 +1,7 @@
 ---
 title: git开发指南
 published: 2026-01-21
-description: ''
+description: 'Git开发学习经验'
 image: ''
 tags: ['学习','Git']
 category: 'Git'

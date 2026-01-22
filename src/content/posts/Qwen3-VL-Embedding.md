@@ -1,5 +1,5 @@
 ---
-title: Qwen3-VL-Embedding 多模态嵌入模型深度解析
+title: Qwen3-VL-Embedding 解析
 published: 2026-01-22
 description: '阿里通义千问3多模态嵌入模型架构与工程实践完整指南'
 image: ''

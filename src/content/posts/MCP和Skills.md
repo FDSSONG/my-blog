@@ -1,7 +1,7 @@
 ---
 title: 大模型开发入门
 published: 2026-01-21
-description: ''
+description: '大模型开发学习经验'
 image: ''
 tags: ['学习','大模型应用']
 category: '大模型'
