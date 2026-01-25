@@ -3,8 +3,8 @@ title: git开发指南
 published: 2026-01-21
 description: 'Git开发学习经验'
 image: ''
-tags: ['学习','Git']
-category: 'Git'
+tags: ['学习','git']
+category: '版本控制工具'
 draft: false 
 lang: ''
 ---
