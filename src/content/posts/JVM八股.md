@@ -3,13 +3,8 @@ title: JVM八股
 published: 2025-11-03
 description: ''
 image: ''
-<<<<<<< Updated upstream
 tags: ['面试','Java虚拟机']
 category: 'Java虚拟机'
-=======
-tags: []
-category: 'Java基础'
->>>>>>> Stashed changes
 draft: false 
 lang: ''
 ---
